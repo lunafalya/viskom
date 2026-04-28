@@ -22,7 +22,7 @@ a {
    BUTTON
 ===================== */
 .btn-primary {
-    background: #0b3c8a;
+    background: #082f6b;
     color: #fff;
     border: none;
     padding: 14px;
@@ -33,7 +33,8 @@ a {
 }
 
 .btn-primary:hover {
-    background: #082f6b;
+    background: #0b3c8a;
+    color: #ffffff;
 }
 
 /* =====================
@@ -362,14 +363,6 @@ input:focus {
 /* =====================
    BUTTONS
 ===================== */
-.btn-primary {
-    background: #0b3c8a;
-    color: white;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 10px;
-    cursor: pointer;
-}
 
 .btn-secondary {
     background: white;

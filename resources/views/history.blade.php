@@ -58,7 +58,9 @@
                 <span class="badge gray">2 Minor</span>
             </div>
 
-            <button class="btn-primary">▶ Watch History</button>
+            <button onclick="window.location='{{ route('watch-history') }}'" class="btn-primary">
+                Watch History
+            </button>
         </div>
 
         <div class="session-card success">
@@ -72,7 +74,9 @@
                 <span class="badge success">0 Alerts</span>
             </div>
 
-            <button class="btn-primary">▶ Watch History</button>
+            <button onclick="window.location='{{ route('watch-history') }}'" class="btn-primary">
+                Watch History
+            </button>
         </div>
 
         <div class="session-card info">
@@ -86,7 +90,9 @@
                 <span class="badge gray">1 Minor</span>
             </div>
 
-            <button class="btn-primary">▶ Watch History</button>
+            <button onclick="window.location='{{ route('watch-history') }}'" class="btn-primary">
+                Watch History
+            </button>
         </div>
 
         <div class="session-card danger">
@@ -101,7 +107,9 @@
                 <span class="badge gray">5 Minor</span>
             </div>
 
-            <button class="btn-primary">▶ Watch History</button>
+            <button onclick="window.location='{{ route('watch-history') }}'" class="btn-primary">
+                Watch History
+            </button>
         </div>
 
     </div>

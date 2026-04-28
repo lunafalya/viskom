@@ -38,15 +38,15 @@
                 </div>
 
                 <div class="form-group">
-    <a href="/dashboard" class="btn-primary" style="display:block;text-align:center">
-        Login →
-    </a>
-</div>
+                    <a href="{{ route('dashboard') }}" class="btn-primary" style="display:block;text-align:center">
+                        Login →
+                    </a>
+                </div>
             </form>
 
             <p style="margin-top:16px;font-size:.85rem;text-align:center">
                 Don't have an account?
-                <a href="#" style="color:#2563eb">Create a new account</a>
+                <a href="{{ route('register') }}" style="color:#2563eb">Create a new account</a>
             </p>
         </div>
     </div>

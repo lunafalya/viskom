@@ -17,9 +17,11 @@
         <p style="margin-top:6px;color:#6b7280">
             Ensure your face is fully visible in the camera frame.
         </p>
-        <button class="btn-primary" style="margin-top:12px">
+        <div class="form-group">
+            <a href="/monitor" class="btn-primary" style="margin-top:12px">
             Start Detection
-        </button>
+        </a>
+        </div>
     </div>
 
     <div class="card">
