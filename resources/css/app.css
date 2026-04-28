@@ -1,0 +1,137 @@
+/* =====================
+   GLOBAL
+===================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', system-ui, sans-serif;
+}
+
+body {
+    background: #f5f7fb;
+    color: #1f2937;
+}
+
+/* =====================
+   LOGIN LAYOUT
+===================== */
+.auth-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 100vh;
+}
+
+/* LEFT */
+.auth-left {
+    background: linear-gradient(135deg, #0b3c8a, #082f6b);
+    color: white;
+    padding: 3rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.auth-left h1 {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.auth-left p {
+    max-width: 420px;
+    opacity: 0.9;
+}
+
+/* RIGHT */
+.auth-right {
+    background: #f9fafb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+}
+
+/* =====================
+   FORM
+===================== */
+label {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+input {
+    width: 100%;
+    padding: 12px 14px;
+    margin-top: 6px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* =====================
+   BUTTON
+===================== */
+.btn-primary {
+    width: 100%;
+    background: #0b3c8a;
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background: #082f6b;
+}
+
+/* =====================
+   SOCIAL
+===================== */
+.social {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.social button {
+    background: white;
+    border: 1px solid #d1d5db;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* =====================
+   FOOTER
+===================== */
+.auth-footer {
+    margin-top: 24px;
+    font-size: 0.8rem;
+    color: #6b7280;
+    text-align: center;
+}
+
+/* =====================
+   RESPONSIVE
+===================== */
+@media (max-width: 768px) {
+    .auth-wrapper {
+        grid-template-columns: 1fr;
+    }
+
+    .auth-left {
+        display: none;
+    }
+}
