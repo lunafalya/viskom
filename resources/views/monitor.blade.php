@@ -227,9 +227,9 @@
     const uiKondisi = document.getElementById('ui-kondisi');
     const uiPesan = document.getElementById('ui-pesan');
     const uiMata = document.getElementById('ui-mata');
-    const uiPesanMata = document.getElementById('ui-pesan-mata'); // Baru ditambah
+    const uiPesanMata = document.getElementById('ui-pesan-mata'); 
     const uiMulut = document.getElementById('ui-mulut');
-    const uiPesanMulut = document.getElementById('ui-pesan-mulut'); // Baru ditambah
+    const uiPesanMulut = document.getElementById('ui-pesan-mulut'); 
     const cardKondisi = document.getElementById('card-kondisi');
     const stopBtn = document.querySelector('.stop-btn'); 
 
@@ -242,8 +242,8 @@
     // ==========================================
     // VARIABEL MEMORI (PENGHITUNG)
     // ==========================================
-    let closedEyeSeconds = 0;    // Menghitung berapa detik mata terpejam berturut-turut
-    let totalYawns = 0;          // Menghitung berapa kali menguap
+    let closedEyeSeconds = 0;       // Menghitung berapa detik mata terpejam berturut-turut
+    let totalYawns = 0;             // Menghitung berapa kali menguap
     let isCurrentlyYawning = false; // Mencegah 1 kali menguap panjang dihitung berkali-kali
 
     // 1. Fungsi untuk Menyalakan Kamera
@@ -254,7 +254,7 @@
                     localStream = stream;
                     video.srcObject = stream;
                     
-                    // Reset UI & Memori
+                    // Reset UI & Memori ke keadaan semula
                     uiKondisi.innerText = "MENUNGGU DATA";
                     uiPesan.innerText = "Menganalisis...";
                     closedEyeSeconds = 0;
@@ -272,7 +272,7 @@
         }
     }
 
-    // Panggil kamera pertama kali
+    // Panggil kamera pertama kali saat halaman dimuat
     startCamera();
 
     // 2. Fungsi Ambil Frame dan Kirim ke API
@@ -300,59 +300,69 @@
                 // LOGIKA PENGHITUNGAN (COUNTING)
                 // ==========================================
                 
-                // Logika Mata
+                // Logika Hitung Detitk Mata Merem
                 if (data.eye === "Closed") {
-                    closedEyeSeconds++; // Tambah 1 detik
+                    closedEyeSeconds++; 
                 } else {
-                    closedEyeSeconds = 0; // Reset ke 0 jika melek
+                    closedEyeSeconds = 0; // Langsung reset ke 0 jika mata terbuka sekilas
                 }
 
-                // Logika Mulut
+                // Logika Hitung Frekuensi Menguap
                 if (data.mouth === "Yawning") {
                     if (!isCurrentlyYawning) {
-                        totalYawns++; // Tambah 1 teguran menguap
-                        isCurrentlyYawning = true; // Kunci agar durasi menguap tidak dihitung lagi
+                        totalYawns++; 
+                        isCurrentlyYawning = true; // Kunci aktif selama mulut masih mangap
                     }
                 } else {
-                    isCurrentlyYawning = false; // Buka kunci jika sudah menutup mulut
+                    isCurrentlyYawning = false; // Kunci terbuka kembali saat mulut menutup
                 }
 
                 // ==========================================
-                // UPDATE TAMPILAN MATA & MULUT
+                // UPDATE TAMPILAN MATA & MULUT (REAL-TIME STATUS)
                 // ==========================================
                 
+                // 1. Status Utama Fisik Mata Langsung Berubah Detik Itu Juga (Real-time)
                 if (data.eye === "Open") {
                     uiMata.innerText = "Terbuka";
-                    uiPesanMata.innerText = "Normal";
-                    uiPesanMata.style.color = "#67ff9d"; // Warna hijau bawaan
                 } else {
                     uiMata.innerText = "Terpejam";
-                    uiPesanMata.innerText = "Tidak Normal";
-                    uiPesanMata.style.color = "#ff4d4d"; // Warna merah
                 }
 
+                // 2. Pesan Peringatan Mata Baru Menjadi Merah/Tidak Normal Setelah Merem >= 5 Detik
+                if (closedEyeSeconds >= 5) {
+                    uiPesanMata.innerText = "Tidak Normal";
+                    uiPesanMata.style.color = "#ff4d4d"; 
+                } else {
+                    uiPesanMata.innerText = "Normal";
+                    uiPesanMata.style.color = "#67ff9d"; 
+                }
+
+                // 3. Status Utama Fisik Mulut Langsung Mengikuti Hasil Prediksi
                 if (data.mouth === "Normal") {
                     uiMulut.innerText = "Tertutup";
-                    uiPesanMulut.innerText = "Normal";
-                    uiPesanMulut.style.color = "#67ff9d";
                 } else {
-                    // Tampilkan indikator hitungan menguap agar driver sadar
                     uiMulut.innerText = `Menguap (${totalYawns}/5)`; 
+                }
+
+                // 4. Pesan Peringatan Mulut Baru Menjadi Merah/Tidak Normal Jika Sudah Menguap >= 5 Kali
+                if (totalYawns >= 5) {
                     uiPesanMulut.innerText = "Tidak Normal";
                     uiPesanMulut.style.color = "#ff4d4d";
+                } else {
+                    uiPesanMulut.innerText = "Normal";
+                    uiPesanMulut.style.color = "#67ff9d";
                 }
 
                 // ==========================================
                 // UPDATE STATUS KONDISI UTAMA (BAHAYA/AMAN)
                 // ==========================================
                 
-                // Cek apakah sudah memenuhi syarat bahaya
-                if(closedEyeSeconds >= 5 || totalYawns >= 5) {
+                // Kotak Kondisi Utama Baru Berubah Merah Total Jika Akumulasi Pelanggaran Terpenuhi
+                if (closedEyeSeconds >= 5 || totalYawns >= 5) {
                     uiKondisi.innerText = "BAHAYA";
                     cardKondisi.style.backgroundColor = "rgba(217, 4, 41, 0.7)"; 
                     cardKondisi.style.border = "2px solid red";
                     
-                    // Beri pesan spesifik mengapa bahaya
                     if (closedEyeSeconds >= 5) {
                         uiPesan.innerText = "Mata terpejam lebih dari 5 detik!";
                     } else if (totalYawns >= 5) {
@@ -400,10 +410,9 @@
             stopBtn.innerText = "⏹ Stop Recording";
             stopBtn.style.backgroundColor = "#EF4444";
             
-            // Panggil ulang kamera (otomatis me-reset counter 5 detik & 5x menguap)
+            // Jalankan ulang kamera dan otomatis me-reset semua counter memori dari nol
             startCamera();
         }
     });
 </script>
-
 @endsection
