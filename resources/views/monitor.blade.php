@@ -193,13 +193,13 @@
                 <div class="stat-card">
                     <h4>MATA</h4>
                     <h2 id="ui-mata">Terbuka</h2>
-                    <small>Normal</small>
+                    <small id="ui-pesan-mata">Normal</small>
                 </div>
 
                 <div class="stat-card">
                     <h4>MULUT</h4>
                     <h2 id="ui-mulut">Tertutup</h2>
-                    <small>Normal</small>
+                    <small id="ui-pesan-mulut">Normal</small>
                 </div>
 
             </div>
@@ -227,7 +227,9 @@
     const uiKondisi = document.getElementById('ui-kondisi');
     const uiPesan = document.getElementById('ui-pesan');
     const uiMata = document.getElementById('ui-mata');
+    const uiPesanMata = document.getElementById('ui-pesan-mata'); // Baru ditambah
     const uiMulut = document.getElementById('ui-mulut');
+    const uiPesanMulut = document.getElementById('ui-pesan-mulut'); // Baru ditambah
     const cardKondisi = document.getElementById('card-kondisi');
     const stopBtn = document.querySelector('.stop-btn'); 
 
@@ -237,7 +239,14 @@
     let detectionInterval = null;
     let isMonitoring = true;
 
-    // 1. Fungsi untuk Menyalakan Kamera (Dibuat fungsi agar bisa dipanggil ulang)
+    // ==========================================
+    // VARIABEL MEMORI (PENGHITUNG)
+    // ==========================================
+    let closedEyeSeconds = 0;    // Menghitung berapa detik mata terpejam berturut-turut
+    let totalYawns = 0;          // Menghitung berapa kali menguap
+    let isCurrentlyYawning = false; // Mencegah 1 kali menguap panjang dihitung berkali-kali
+
+    // 1. Fungsi untuk Menyalakan Kamera
     function startCamera() {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.getUserMedia({ video: true })
@@ -245,23 +254,25 @@
                     localStream = stream;
                     video.srcObject = stream;
                     
-                    // Reset UI ke mode awas
+                    // Reset UI & Memori
                     uiKondisi.innerText = "MENUNGGU DATA";
                     uiPesan.innerText = "Menganalisis...";
+                    closedEyeSeconds = 0;
+                    totalYawns = 0;
+                    isCurrentlyYawning = false;
                     
                     detectionInterval = setInterval(captureAndPredict, 1000);
                 })
                 .catch(function(err) {
                     console.error("Kamera tidak dapat diakses: ", err);
                     alert("Harap izinkan akses kamera!");
-                    // Kembalikan status jika gagal
                     isMonitoring = false;
                     stopBtn.innerText = "▶ Start Recording";
                 });
         }
     }
 
-    // Panggil kamera pertama kali saat halaman dimuat
+    // Panggil kamera pertama kali
     startCamera();
 
     // 2. Fungsi Ambil Frame dan Kirim ke API
@@ -284,16 +295,69 @@
             })
             .then(response => response.json())
             .then(data => {
-                // UPDATE MATA & MULUT (Disesuaikan dengan output Python)
-                uiMata.innerText = (data.eye === "Open") ? "Terbuka" : "Terpejam";
-                uiMulut.innerText = (data.mouth === "Normal") ? "Tertutup" : "Menguap";
+                
+                // ==========================================
+                // LOGIKA PENGHITUNGAN (COUNTING)
+                // ==========================================
+                
+                // Logika Mata
+                if (data.eye === "Closed") {
+                    closedEyeSeconds++; // Tambah 1 detik
+                } else {
+                    closedEyeSeconds = 0; // Reset ke 0 jika melek
+                }
 
-                // UPDATE STATUS
-                if(data.drowsy === true) {
+                // Logika Mulut
+                if (data.mouth === "Yawning") {
+                    if (!isCurrentlyYawning) {
+                        totalYawns++; // Tambah 1 teguran menguap
+                        isCurrentlyYawning = true; // Kunci agar durasi menguap tidak dihitung lagi
+                    }
+                } else {
+                    isCurrentlyYawning = false; // Buka kunci jika sudah menutup mulut
+                }
+
+                // ==========================================
+                // UPDATE TAMPILAN MATA & MULUT
+                // ==========================================
+                
+                if (data.eye === "Open") {
+                    uiMata.innerText = "Terbuka";
+                    uiPesanMata.innerText = "Normal";
+                    uiPesanMata.style.color = "#67ff9d"; // Warna hijau bawaan
+                } else {
+                    uiMata.innerText = "Terpejam";
+                    uiPesanMata.innerText = "Tidak Normal";
+                    uiPesanMata.style.color = "#ff4d4d"; // Warna merah
+                }
+
+                if (data.mouth === "Normal") {
+                    uiMulut.innerText = "Tertutup";
+                    uiPesanMulut.innerText = "Normal";
+                    uiPesanMulut.style.color = "#67ff9d";
+                } else {
+                    // Tampilkan indikator hitungan menguap agar driver sadar
+                    uiMulut.innerText = `Menguap (${totalYawns}/5)`; 
+                    uiPesanMulut.innerText = "Tidak Normal";
+                    uiPesanMulut.style.color = "#ff4d4d";
+                }
+
+                // ==========================================
+                // UPDATE STATUS KONDISI UTAMA (BAHAYA/AMAN)
+                // ==========================================
+                
+                // Cek apakah sudah memenuhi syarat bahaya
+                if(closedEyeSeconds >= 5 || totalYawns >= 5) {
                     uiKondisi.innerText = "BAHAYA";
-                    uiPesan.innerText = "Anda Mengantuk!";
                     cardKondisi.style.backgroundColor = "rgba(217, 4, 41, 0.7)"; 
                     cardKondisi.style.border = "2px solid red";
+                    
+                    // Beri pesan spesifik mengapa bahaya
+                    if (closedEyeSeconds >= 5) {
+                        uiPesan.innerText = "Mata terpejam lebih dari 5 detik!";
+                    } else if (totalYawns >= 5) {
+                        uiPesan.innerText = "Terdeteksi sering menguap (>5 kali)!";
+                    }
                 } else {
                     uiKondisi.innerText = "AMAN";
                     uiPesan.innerText = "Fokus Optimal";
@@ -310,38 +374,33 @@
     // 3. LOGIKA TOMBOL START / STOP
     stopBtn.addEventListener('click', function() {
         if (isMonitoring) {
-            // MATIKAN MONITORING
             isMonitoring = false;
 
-            if (detectionInterval) {
-                clearInterval(detectionInterval);
-            }
-
+            if (detectionInterval) clearInterval(detectionInterval);
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
                 video.srcObject = null;
             }
 
-            // Update UI Menjadi Nonaktif
             uiKondisi.innerText = "OFFLINE";
             uiPesan.innerText = "Monitoring Berhenti";
             uiMata.innerText = "-";
             uiMulut.innerText = "-";
+            uiPesanMata.innerText = "-";
+            uiPesanMata.style.color = "white";
+            uiPesanMulut.innerText = "-";
+            uiPesanMulut.style.color = "white";
             cardKondisi.style.backgroundColor = "rgba(107, 114, 128, 0.3)";
             cardKondisi.style.border = "1px solid rgba(255,255,255,.1)";
 
-            // Ubah tombol jadi "Start"
             stopBtn.innerText = "▶ Start Recording";
-            stopBtn.style.backgroundColor = "#10B981"; // Warna Hijau (opsional)
+            stopBtn.style.backgroundColor = "#10B981";
         } else {
-            // NYALAKAN MONITORING KEMBALI
             isMonitoring = true;
-            
-            // Ubah tombol jadi "Stop"
             stopBtn.innerText = "⏹ Stop Recording";
-            stopBtn.style.backgroundColor = "#EF4444"; // Warna Merah (opsional)
+            stopBtn.style.backgroundColor = "#EF4444";
             
-            // Panggil ulang kamera
+            // Panggil ulang kamera (otomatis me-reset counter 5 detik & 5x menguap)
             startCamera();
         }
     });
