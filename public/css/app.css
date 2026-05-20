@@ -1,6 +1,36 @@
 /* =====================
    RESET & GLOBAL
 ===================== */
+:root {
+    --bg-body: #f5f7fb;
+    --bg-card: #fff;
+    --bg-sidebar: #fff;
+    --bg-topbar: #ffffff;
+    --bg-input: #f8fafc;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --text-heading: #111827;
+    --border-color: #e5e7eb;
+    --border-card: #eef2f7;
+    --sidebar-active: #eaf1ff;
+    --sidebar-active-text: #0b3c8a;
+}
+
+.dark-mode {
+    --bg-body: #0f172a;
+    --bg-card: #1e293b;
+    --bg-sidebar: #1e293b;
+    --bg-topbar: #1e293b;
+    --bg-input: #334155;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-heading: #f1f5f9;
+    --border-color: #334155;
+    --border-card: #334155;
+    --sidebar-active: #1e3a5f;
+    --sidebar-active-text: #60a5fa;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -9,8 +39,8 @@
 }
 
 body {
-    background: #f5f7fb;
-    color: #1f2937;
+    background: var(--bg-body);
+    color: var(--text-primary);
 }
 
 a {
@@ -133,8 +163,8 @@ input:focus {
 
 .sidebar {
     width: 260px;
-    background: #fff;
-    border-right: 1px solid #e5e7eb;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
     padding: 24px;
 }
 
@@ -147,13 +177,13 @@ input:focus {
     padding: 12px;
     margin-top: 8px;
     border-radius: 8px;
-    color: #374151;
+    color: var(--text-primary);
 }
 
 .sidebar a.active,
 .sidebar a:hover {
-    background: #eaf1ff;
-    color: #0b3c8a;
+    background: var(--sidebar-active);
+    color: var(--sidebar-active-text);
 }
 
 .main {
@@ -166,16 +196,16 @@ input:focus {
 .topbar {
     display: flex;
     align-items: center;
-    justify-content: space-between; /* kiri & kanan */
-    background: #ffffff;
+    justify-content: space-between;
+    background: var(--bg-topbar);
     padding: 14px 24px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .topbar-title {
     font-size: 1.1rem;
     font-weight: 600;
-    color: #111827;
+    color: var(--text-heading);
 }
 
 /* =====================
@@ -211,7 +241,7 @@ input:focus {
 }
 
 .card {
-    background: #fff;
+    background: var(--bg-card);
     border-radius: 16px;
     padding: 20px;
     box-shadow: 0 8px 24px rgba(0,0,0,.05);
@@ -271,7 +301,7 @@ input:focus {
 }
 
 .stat-card {
-    background: #fff;
+    background: var(--bg-card);
     padding: 20px;
     border-radius: 12px;
     border-left: 5px solid;
@@ -320,7 +350,7 @@ input:focus {
 }
 
 .session-card {
-    background: #fff;
+    background: var(--bg-card);
     padding: 18px;
     border-radius: 14px;
     display: grid;
@@ -485,7 +515,7 @@ input:focus {
    SETTINGS CARDS
 ===================== */
 .settings-card {
-    background: #fff;
+    background: var(--bg-card);
     padding: 20px;
     border-radius: 16px;
     margin-bottom: 20px;
@@ -513,7 +543,7 @@ input:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #f8fafc;
+    background: var(--bg-input);
     padding: 14px;
     border-radius: 12px;
     margin-bottom: 12px;

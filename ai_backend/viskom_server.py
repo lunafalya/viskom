@@ -88,6 +88,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Load all models once at startup
 print("[viskom] Loading YOLO...")
 yolo_model = YOLO(os.path.join(BASE_DIR, 'yolov8n-face.pt'))
+USE_HALF = device.type == 'cuda'
+if USE_HALF:
+    yolo_model.model.half()
 
 print("[viskom] Loading EyeStateNet...")
 eye_model = EyeStateNet().to(device)
@@ -136,6 +139,13 @@ def process_frame(frame_bytes, session):
     if frame is None:
         return None
 
+    # Downscale large frames to max 480px wide for faster processing
+    h, w = frame.shape[:2]
+    MAX_W = 480
+    if w > MAX_W:
+        scale = MAX_W / w
+        frame = cv2.resize(frame, (MAX_W, int(h * scale)))
+
     response = {
         "status": "ACTIVE",
         "eye": None,
@@ -145,8 +155,8 @@ def process_frame(frame_bytes, session):
         "fps": 0.0,
     }
 
-    # YOLO face detection
-    results_yolo = yolo_model(frame, verbose=False)
+    # YOLO face detection (imgsz=320 for speed, half precision if CUDA)
+    results_yolo = yolo_model(frame, verbose=False, imgsz=320, half=USE_HALF)
 
     for r in results_yolo:
         kpts = r.keypoints

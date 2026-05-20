@@ -4,8 +4,8 @@
 
 <style>
 .monitor-wrapper { position:relative; width:100%; height:calc(100vh - 90px); border-radius:18px; overflow:hidden; background:#000; }
-.monitor-camera { width:100%; height:100%; object-fit:cover; }
-.monitor-overlay-canvas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:5; pointer-events:none; }
+.monitor-camera { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+.monitor-overlay-canvas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:5; pointer-events:none; transform:scaleX(-1); }
 #capture-canvas { display:none; }
 .monitor-hud { position:absolute; inset:0; padding:24px; z-index:10; pointer-events:none; }
 .monitor-hud .clickable { pointer-events:auto; }
@@ -95,12 +95,21 @@
     </div>
 </div>
 
+{{-- Visual warning overlay --}}
+<div id="warning-overlay" style="
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    background:rgba(220,38,38,0.35);z-index:9999;
+    pointer-events:none;opacity:0;transition:opacity 0.15s;
+"></div>
+
 <script>
-    // === CONFIG ===
+    // === CONFIG (from user settings) ===
     var WS_URL = "ws://localhost:8001/ws/monitor";
     var INTERVAL = 200;
-    var params = new URLSearchParams(window.location.search);
-    var isDevMode = params.get("dev") === "true";
+    var isDevMode = @json($settings->dev_mode ?? false);
+    var alarmEnabled = @json($settings->alarm_enabled ?? true);
+    var visualWarning = @json($settings->visual_warning ?? true);
+    var warningOverlay = document.getElementById('warning-overlay');
 
     // === DOM ===
     var video = document.getElementById("webcam");
@@ -130,7 +139,110 @@
     // === STATE ===
     var ws = null, localStream = null, isMonitoring = false, tid = null, lastT = 0;
     // Academic vigilance state
-    var eyeHist = [], contClosed = 0, yawnTs = [], wasYawn = false;
+    var eyeHist = [], contClosed = 0, yawnTs = [], wasYawn = false, lastYawnTime = 0;
+    var YAWN_COOLDOWN = 4000;
+
+    // Session persistence state
+    var sessionId = null;
+    var sessionStartTime = null;
+    var alertCounts = { microsleep: 0, perclos: 0, yawn: 0 };
+    var csrfToken = document.querySelector('meta[name="csrf-token"]');
+    var csrf = csrfToken ? csrfToken.getAttribute('content') : '';
+
+    // === WEB AUDIO API ALARM ===
+    var audioCtx = null;
+    var activeOsc = null;
+    var activeGain = null;
+    var alarmLevel = 0;
+    var alarmInterval = null;
+
+    function getAudioCtx() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        return audioCtx;
+    }
+
+    function stopAlarm() {
+        alarmLevel = 0;
+        if (alarmInterval) { clearTimeout(alarmInterval); clearInterval(alarmInterval); alarmInterval = null; }
+        if (activeOsc) { try { activeOsc.stop(0); } catch(e){} activeOsc = null; }
+        if (activeGain) { try { activeGain.disconnect(); } catch(e){} activeGain = null; }
+        // Kill the audio context entirely to stop any scheduled oscillators
+        if (audioCtx) { try { audioCtx.close(); } catch(e){} audioCtx = null; }
+    }
+
+    // Level 1: 3 short beeps at 800Hz (WASPADA)
+    function playAlarmLevel1() {
+        if (!alarmEnabled || alarmLevel >= 1) return;
+        stopAlarm();
+        alarmLevel = 1;
+        var ctx = getAudioCtx();
+        var beepCount = 0;
+        alarmInterval = setInterval(function() {
+            if (beepCount >= 3) { clearInterval(alarmInterval); alarmInterval = null; return; }
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.type = 'sine'; osc.frequency.value = 800;
+            gain.gain.value = 0.3;
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(ctx.currentTime + 0.2);
+            beepCount++;
+        }, 300);
+    }
+
+    // Level 2: Pulsing 1000Hz tone (BAHAYA - microsleep)
+    function playAlarmLevel2() {
+        if (!alarmEnabled || alarmLevel >= 2) return;
+        stopAlarm();
+        alarmLevel = 2;
+        var ctx = getAudioCtx();
+        var on = true;
+        function pulse() {
+            if (alarmLevel !== 2) return;
+            if (on) {
+                activeOsc = ctx.createOscillator();
+                activeGain = ctx.createGain();
+                activeOsc.type = 'sine'; activeOsc.frequency.value = 1000;
+                activeGain.gain.value = 0.5;
+                activeOsc.connect(activeGain); activeGain.connect(ctx.destination);
+                activeOsc.start(); activeOsc.stop(ctx.currentTime + 0.5);
+            }
+            on = !on;
+            alarmInterval = setTimeout(pulse, on ? 200 : 500);
+        }
+        pulse();
+    }
+
+    // Level 3: Rapid 1200Hz alarm (BAHAYA - sustained microsleep >=3s)
+    function playAlarmLevel3() {
+        if (!alarmEnabled || alarmLevel >= 3) return;
+        stopAlarm();
+        alarmLevel = 3;
+        var ctx = getAudioCtx();
+        var on = true;
+        function rapidPulse() {
+            if (alarmLevel !== 3) return;
+            if (on) {
+                activeOsc = ctx.createOscillator();
+                activeGain = ctx.createGain();
+                activeOsc.type = 'square'; activeOsc.frequency.value = 1200;
+                activeGain.gain.value = 0.6;
+                activeOsc.connect(activeGain); activeGain.connect(ctx.destination);
+                activeOsc.start(); activeOsc.stop(ctx.currentTime + 0.15);
+            }
+            on = !on;
+            alarmInterval = setTimeout(rapidPulse, 200);
+        }
+        rapidPulse();
+    }
+
+    // Visual warning flash
+    var flashTimer = null;
+    function flashWarning() {
+        if (!visualWarning) return;
+        warningOverlay.style.opacity = '1';
+        if (flashTimer) clearTimeout(flashTimer);
+        flashTimer = setTimeout(function() { warningOverlay.style.opacity = '0'; }, 400);
+    }
 
     function setConn(s, t) {
         connDot.className = "connection-dot " + s;
@@ -213,6 +325,7 @@
 
                 if (closed) { contClosed += dt; } else { contClosed = 0; }
                 micro = contClosed >= 1000;
+                if (micro && contClosed - dt < 1000) alertCounts.microsleep++;
 
                 uiEye.textContent = closed ? "Terpejam" : "Terbuka";
                 if (micro) {
@@ -231,7 +344,13 @@
             var ypm = 0;
             if (d.mouth !== null) {
                 if (d.mouth === "Yawning") {
-                    if (!wasYawn) { yawnTs.push(now); wasYawn = true; }
+                    // Only register a new yawn if cooldown has passed since the last one
+                    if (!wasYawn && (now - lastYawnTime) > YAWN_COOLDOWN) {
+                        yawnTs.push(now);
+                        lastYawnTime = now;
+                        alertCounts.yawn++;
+                    }
+                    wasYawn = true;
                 } else { wasYawn = false; }
 
                 while (yawnTs.length && (now - yawnTs[0]) > 60000) yawnTs.shift();
@@ -242,27 +361,34 @@
                 uiMouthSub.className = ypm > 1 ? "stat-sub warning" : "stat-sub";
             }
 
-            // --- MAIN STATUS ---
+            // --- MAIN STATUS + ALARM ---
             if (micro) {
                 cardStatus.className = "stat-card danger";
                 uiStatus.textContent = "BAHAYA";
                 uiStatusSub.textContent = "Microsleep! (" + (contClosed / 1000).toFixed(1) + "s)";
                 uiStatusSub.className = "stat-sub warning";
+                if (contClosed >= 3000) { playAlarmLevel3(); flashWarning(); }
+                else { playAlarmLevel2(); flashWarning(); }
             } else if (perclos >= 0.15) {
                 cardStatus.className = "stat-card danger";
                 uiStatus.textContent = "BAHAYA";
                 uiStatusSub.textContent = "PERCLOS " + (perclos * 100).toFixed(0) + "%";
                 uiStatusSub.className = "stat-sub warning";
+                playAlarmLevel1();
+                alertCounts.perclos++;
             } else if (ypm > 1) {
                 cardStatus.className = "stat-card danger";
                 uiStatus.textContent = "WASPADA";
                 uiStatusSub.textContent = "Menguap " + ypm + "x/menit";
                 uiStatusSub.className = "stat-sub warning";
+                playAlarmLevel1();
             } else {
                 cardStatus.className = "stat-card";
                 uiStatus.textContent = "AMAN";
                 uiStatusSub.textContent = "Fokus Optimal";
                 uiStatusSub.className = "stat-sub";
+                stopAlarm();
+                warningOverlay.style.opacity = '0';
             }
 
             // --- DEV MODE ---
@@ -302,14 +428,21 @@
             controlBtn.textContent = "Stop Monitoring";
             controlBtn.className = "control-btn stop clickable";
             resetAll();
+            alertCounts = { microsleep: 0, perclos: 0, yawn: 0 };
 
-            // Start WebSocket and frame loop immediately.
-            // setInterval naturally handles the case where video isn't ready yet
-            // (sendFrame returns early if videoWidth is 0).
+            // Create session in DB
+            fetch('/api/monitor/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                sessionId = d.session_id;
+                sessionStartTime = Date.now();
+                console.log('[viskom] Session started:', sessionId);
+            }).catch(function(e) { console.error('Session start error:', e); });
+
             connectWS();
             tid = setInterval(sendFrame, INTERVAL);
 
-            // Set overlay dimensions when video metadata loads
             video.onloadedmetadata = function() {
                 overlay.width = video.videoWidth;
                 overlay.height = video.videoHeight;
@@ -321,6 +454,26 @@
         });
     }
 
+    function saveSession() {
+        if (!sessionId || !sessionStartTime) return;
+        var duration = Math.round((Date.now() - sessionStartTime) / 1000);
+        fetch('/api/monitor/stop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+            body: JSON.stringify({
+                session_id: sessionId,
+                duration_seconds: duration,
+                microsleep_count: alertCounts.microsleep,
+                perclos_alerts: alertCounts.perclos,
+                yawn_count: alertCounts.yawn,
+            }),
+            keepalive: true,  // Ensures request completes even on page unload
+        });
+        console.log('[viskom] Session saved:', sessionId, duration + 's');
+        sessionId = null;
+        sessionStartTime = null;
+    }
+
     function stopAll() {
         isMonitoring = false;
         if (tid) { clearInterval(tid); tid = null; }
@@ -330,6 +483,9 @@
             video.srcObject = null;
             localStream = null;
         }
+        stopAlarm();
+        warningOverlay.style.opacity = '0';
+        saveSession();
         resetAll();
         controlBtn.textContent = "Start Monitoring";
         controlBtn.className = "control-btn start clickable";
@@ -337,6 +493,11 @@
 
     controlBtn.addEventListener("click", function() {
         if (isMonitoring) stopAll(); else startCamera();
+    });
+
+    // Save on page close/navigate away
+    window.addEventListener('beforeunload', function() {
+        if (isMonitoring) saveSession();
     });
 
     // Auto-start

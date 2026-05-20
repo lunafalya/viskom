@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>SafeDrive AI</title>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 </head>
 
-<body>
+<body class="{{ auth()->user()?->settings?->dark_mode ? 'dark-mode' : '' }}">
 
 <div class="dashboard">
 
@@ -28,7 +29,7 @@
         </a>
 
         <div class="form-group">
-            
+
         </div>
         <a href="{{ route('monitor') }}" class="btn-primary sidebar-btn">
             Start Monitoring
@@ -43,9 +44,18 @@
     <h1 class="topbar-title">Dashboard Overview</h1>
 
     <div class="topbar-right">
-        <button class="notif-btn">🔔</button>
+        <form method="POST" action="{{ route('logout') }}" style="display:inline;">
+            @csrf
+            <button type="submit" class="notif-btn" title="Logout" style="cursor:pointer;">Logout</button>
+        </form>
         <a href="{{ route('profile') }}">
-            <img src="{{ asset('img/edit.jpg') }}" alt="Profile" class="profile-img">
+            @if(auth()->user()->profile_picture)
+                <img src="{{ asset('storage/' . auth()->user()->profile_picture) }}" alt="Profile" class="profile-img">
+            @else
+                <div class="profile-img" style="display:flex;align-items:center;justify-content:center;background:#e5e7eb;color:#374151;font-weight:700;font-size:16px;">
+                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                </div>
+            @endif
         </a>
     </div>
 </header>
