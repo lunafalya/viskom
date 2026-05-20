@@ -24,3 +24,9 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# AI Backend
+/ai_backend/*.pt
+/ai_backend/*.task
+/ai_backend/venv/
+/ai_backend/__pycache__/
