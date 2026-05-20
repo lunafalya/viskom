@@ -246,16 +246,6 @@ input, select {
     </div>
 
 
-    {{-- SECURITY --}}
-    <div class="security-box">
-        <div>
-            <h3 style="margin-bottom:5px;">Account Security</h3>
-            <p style="color:#2563eb;">
-                Your profile data is encrypted with enterprise-grade security.
-            </p>
-        </div>
-    </div>
-
     <div class="footer-note">
         2024-2026 SafeDrive AI Vigilance Systems.
     </div>
